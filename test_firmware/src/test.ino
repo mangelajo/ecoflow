@@ -2,9 +2,13 @@
 #include <ESPmDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
+#include "RTClib.h"
+#include <SPI.h>
 
 #include "riego_1_0_0.h"
 #include "wifi_pass.h"
+
+RTC_DS3231 rtc;
 
 void setup() {
   Serial.begin(115200);
@@ -15,6 +19,22 @@ void setup() {
   ArduinoOTA.setHostname("ecoflow");
 //  ArduinoOTA.setPassword("admin");
   ArduinoOTA.begin();
+
+   if (! rtc.begin()) {
+    Serial.println("Couldn't find RTC");
+    Serial.flush();
+    while (1) delay(10);
+  }
+
+  if (rtc.lostPower()) {
+    Serial.println("RTC lost power, let's set the time!");
+    // When time needs to be set on a new device, or after a power loss, the
+    // following line sets the RTC to the date & time this sketch was compiled
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    // This line sets the RTC with an explicit date & time, for example to set
+    // January 21, 2014 at 3am you would call:
+    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
+  }
 
   delay(300);
   pinMode(RELAY1, OUTPUT);
@@ -31,6 +51,8 @@ void setup() {
   Serial.println("Setup done");
   test();
 }
+char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+
 
 void loop() {
 
@@ -47,6 +69,24 @@ void loop() {
   Serial.println(WiFi.localIP());
   Serial.print("VIN: ");
   Serial.println(vin);
+
+ DateTime now = rtc.now();
+
+    Serial.print(now.year(), DEC);
+    Serial.print('/');
+    Serial.print(now.month(), DEC);
+    Serial.print('/');
+    Serial.print(now.day(), DEC);
+    Serial.print(" (");
+    Serial.print(daysOfTheWeek[now.dayOfTheWeek()]);
+    Serial.print(") ");
+    Serial.print(now.hour(), DEC);
+    Serial.print(':');
+    Serial.print(now.minute(), DEC);
+    Serial.print(':');
+    Serial.print(now.second(), DEC);
+    Serial.println();
+
 
   ArduinoOTA.handle();
   delay(100);
